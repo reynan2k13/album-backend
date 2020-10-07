@@ -62,7 +62,10 @@ router.route('/photos/list')
 					limit : req.body.limit
 					});
 			}).skip(req.body.skip).limit(req.body.limit);
-			
+		}else{
+			res.json({
+				message : 'error value of limit or skip'
+			})
 		}
 	});
 
@@ -73,7 +76,7 @@ router.route('/photos')
 		const form = new formidable.IncomingForm();
 		let files = [];
 		let filePath = "";
-		form.uploadDir = __dirname + '/uploads';
+		form.uploadDir = __dirname + '/uploads'; 
 
 		form
 			.on('field', (album, category) => {
@@ -128,7 +131,7 @@ router.route('/photos')
 	.delete((req, res) => {
 		const sendResponse = true;
 		for(const item of req.body){
-			const {album ,documents} = item;
+			let {album ,documents} = item;
 			if(album && documents){
 				let name = documents.split(',');
 				Photos.deleteMany({
