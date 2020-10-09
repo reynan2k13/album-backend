@@ -24,20 +24,52 @@ const mongoose   = require('mongoose');
 mongoose.connect('mongodb://testrestify:testrestify@ds157078.mlab.com:57078/restifycollection', { useUnifiedTopology: true , useNewUrlParser: true }); // connect to our database
 const Photos     = require('./app/models/photos'); // photos model
 
+//upload function , multi or single
+const upload = (req , res) => {
+	const sendResponse = true;
+	if(req.body.length === undefined){
+		req.body = [{
+			album : req.params.album,
+			documents : req.params.file
+		}]
+	}
+	for(const item of req.body){
+		let {album ,documents} = item;
+		if(album && documents){
+			let name = documents.split(',');
+			Photos.deleteMany({
+				album: album,
+				name : { $in: name}
+			}, (err) => {
+				if (err){
+					res.send(err);
+					sendResponse = false;
+				}
+			});
+	
+			name.forEach(val => {
+				try {
+					fs.unlinkSync((path.resolve(__dirname + '/album/'+ album + '/'+val))) //remove file in the path folder
+				} catch(err) {
+					console.error(err)
+				}
+			})
+		}
+	}
+	if(sendResponse) res.json({ message: 'OK' });
+}
 
 const router = express.Router();
 
-
+// routes
 router.use((req, res, next) => {
 	console.log('Event triggered.');
 	next();
 });
 
-
 router.get('/health', (req, res) => {
 	res.json({ message: 'OK' });	
 });
-
 
 router.route('/photos/list')
 	.post((req, res) => {
@@ -129,33 +161,14 @@ router.route('/photos')
 	})
 
 	.delete((req, res) => {
-		const sendResponse = true;
-		for(const item of req.body){
-			let {album ,documents} = item;
-			if(album && documents){
-				let name = documents.split(',');
-				Photos.deleteMany({
-					album: album,
-					name : { $in: name}
-				}, (err) => {
-					if (err){
-						res.send(err);
-						sendResponse = false;
-					}
-				});
-		
-				name.forEach(val => {
-					try {
-						fs.unlinkSync((path.resolve(__dirname + '/album/'+ album + '/'+val))) //remove file in the path folder
-					} catch(err) {
-						console.error(err)
-					}
-				})
-			}
-		}
-		if(sendResponse) res.json({ message: 'OK' });
+		upload(req, res)
 	});
 
+//delete single
+router.route('/photos/:album/:file')
+	.delete((req , res) => {
+		upload(req , res)
+	});
 
 app.use('/', router);
 
